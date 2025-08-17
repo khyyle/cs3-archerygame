@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "stdlib.h": "c",
+        "math.h": "c",
+        "sdl_wrapper.h": "c",
+        "stdbool.h": "c",
+        "vector.h": "c",
+        "turn_engine.h": "c",
+        "assert.h": "c",
+        "list.h": "c",
+        "sdl2_gfxprimitives.h": "c",
+        "crate.h": "c",
+        "forces.h": "c",
+        "random": "c"
+    }
+}
