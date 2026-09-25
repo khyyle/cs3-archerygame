@@ -360,6 +360,7 @@ void state_tick(state_t *state, double dt) {
       player_id_t winner = (hp2 <= 0 && hp1 > 0) ? PLAYER_ONE : PLAYER_TWO;
       push_gameover_assets();
       turn_engine_destroy(state->eng);
+      state->eng = NULL;
       vector_t min = state->level_info[FOREST_LEVEL_IDX].screen_min;
       vector_t max = state->level_info[FOREST_LEVEL_IDX].screen_max;
       push_winner_label(winner, min, max);

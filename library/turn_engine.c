@@ -223,6 +223,9 @@ void turn_engine_update(turn_engine_t *eng, double dt) {
 void turn_engine_on_key(char key, key_event_type_t type, double held_time,
                         void *aux) {
   state_t *state = aux;
+  if (state->eng == NULL) {
+    return;
+  }
   if (type == KEY_PRESSED) {
     switch (key) {
     case ONE_KEY:
