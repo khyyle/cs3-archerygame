@@ -1,0 +1,5 @@
+emsdk/
+.debug
+bin/
+out/
+.DS_Store

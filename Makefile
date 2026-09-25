@@ -10,6 +10,11 @@ STUDENT_LIBS = asset asset_cache collision sdl_wrapper level camera turn_engine 
 CLEAN_COMMAND = find out/ ! -name .gitignore -type f -delete && \
 find bin/ ! -name .gitignore -type f -delete
 
+# run 'make game' without asan, ensuring an optimized build
+ifeq ($(MAKECMDGOALS),game)
+  NO_ASAN ?= true
+endif
+
 # Compiling with asan (run 'make all' as normal)
 ifndef NO_ASAN
   CFLAGS = -fsanitize=address,undefined,leak
@@ -36,7 +41,10 @@ CC = clang
 # -g adds filenames and line numbers to the executable for useful stack traces
 # -fno-omit-frame-pointer allows stack traces to be generated
 #   (take CS 24 for a full explanation)
-CFLAGS += -Iinclude $(shell sdl2-config --cflags) -Wall -g -fno-omit-frame-pointer
+# Use Emscripten's SDL2 ports
+NATIVE_SDL_CFLAGS = $(shell sdl2-config --cflags)
+NATIVE_SDL_LIBS = $(shell sdl2-config --libs)
+CFLAGS += -Iinclude -Wall -g -fno-omit-frame-pointer
 
 # Emscripten compilation section
 # Flags to pass to emcc:
@@ -50,14 +58,18 @@ CFLAGS += -Iinclude $(shell sdl2-config --cflags) -Wall -g -fno-omit-frame-point
 # -g enables DWARF support, for debugging purposes
 # -gsource-map --source-map-base http://localhost:8000/bin/ creates a source map from the C file for debugging
 EMCC = emcc
-EMCC_FLAGS = -s EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=655360000 -s USE_SDL=2 -s USE_SDL_GFX=2 -s USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='["png"]' -s USE_SDL_TTF=2 -s USE_SDL_MIXER=2 -s ASSERTIONS=1 -O2 -g --preload-file assets
+# ensure emcc puts SDL2/SDL_image.h on the include path by adding EMCC_PORTS during compilation
+EMCC_PORTS = -s USE_SDL=2 -s USE_SDL_GFX=2 -s USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='["png"]' -s USE_SDL_TTF=2 -s USE_SDL_MIXER=2
+EMCC_FLAGS = -s EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=655360000 $(EMCC_PORTS) -s ASSERTIONS=1 -O2 -g --preload-file assets
+WASM_CFLAGS = $(CFLAGS) $(EMCC_PORTS)
 
 # Compiler flag that links the program with the math library
 LIB_MATH = -lm
 # Compiler flags that link the program with the math library
 # Note that $(...) substitutes a variable's value, so this line is equivalent to
 # LIBS = -lm
-LIBS = $(LIB_MATH) $(shell sdl2-config --libs)
+LIBS = $(LIB_MATH) $(NATIVE_SDL_LIBS)
+WASM_LIBS = $(LIB_MATH)
 
 # List of compiled .o files corresponding to STUDENT_LIBS, e.g. "out/vector.o".
 # Don't worry about the syntax; it's just adding "out/" to the start
@@ -77,13 +89,14 @@ WASM_STUDENT_OBJS = $(addprefix out/,$(STUDENT_LIBS:=.wasm.o))
 # It builds the files in TEST_BINS and DEMO_BINS, as well as making the server for the demos
 # "To build 'all', make sure all files in TEST_BINS and DEMO_BINS are up to date."
 # You can execute this rule by running the command "make all", or just "make".
+PORT ?= 8000
+
 game: bin/game.html server
 
-# Make the python server for your demos
-# To run this, type 'make server'
+# Make the python server
 server:
-	@echo "Go to \033[0;32mhttp://labradoodle.caltech.edu:$(shell cs3-port)/bin/\033[0m to access your demo!" && \
-	python3 -m http.server $(shell cs3-port) | grep -v "Serving HTTP"
+	@echo "Open \033[0;32mhttp://localhost:$(PORT)/bin/game.html\033[0m"
+	python3 -m http.server $(PORT)
 
 # Any .o file in "out" is built from the corresponding C file.
 # Although .c files can be directly compiled into an executable, first building
@@ -97,20 +110,20 @@ server:
 # and $@ means "the target file", so the command tells clang
 # to compile the source C file into the target .o file.
 out/%.o: library/%.c # source file may be found in "library"
-	$(CC) -c $(CFLAGS) $^ -o $@
+	$(CC) -c $(CFLAGS) $(NATIVE_SDL_CFLAGS) $^ -o $@
 out/%.o: demo/%.c # or "demo"
-	$(CC) -c $(CFLAGS) $^ -o $@
+	$(CC) -c $(CFLAGS) $(NATIVE_SDL_CFLAGS) $^ -o $@
 out/%.o: tests/%.c # or "tests"
-	$(CC) -c $(CFLAGS) $^ -o $@
+	$(CC) -c $(CFLAGS) $(NATIVE_SDL_CFLAGS) $^ -o $@
 
 # Emscripten compilation flags
 # This is very similar to the above compilation, except for emscripten
 out/%.wasm.o: library/%.c # source file may be found in "library"
-	$(EMCC) -c $(CFLAGS) $^ -o $@
+	$(EMCC) -c $(WASM_CFLAGS) $^ -o $@
 out/%.wasm.o: demo/%.c # or "demo"
-	$(EMCC) -c $(CFLAGS) $^ -o $@
+	$(EMCC) -c $(WASM_CFLAGS) $^ -o $@
 out/%.wasm.o: tests/%.c # or "tests"
-	$(EMCC) -c $(CFLAGS) $^ -o $@
+	$(EMCC) -c $(WASM_CFLAGS) $^ -o $@
 
 # Builds bin/%.html by linking the necessary .wasm.o files.
 # Unlike the out/%.wasm.o rule, this uses the LIBS flags and omits the -c flag,
@@ -119,7 +132,7 @@ GAME_REF = body color emscripten forces list scene vector
 GAME_REF_OBJS = $(addprefix $(REF_FOLDER)/,$(GAME_REF:=.wasm.ref.o))
 
 bin/game.html: out/game.wasm.o $(GAME_REF_OBJS) $(WASM_STUDENT_OBJS)
-	$(EMCC) $(EMCC_FLAGS) $(CFLAGS) $(LIBS) $^ -o $@
+	$(EMCC) $(EMCC_FLAGS) $(WASM_CFLAGS) $(WASM_LIBS) $^ -o $@
 
 # Builds the test suite executables from the corresponding test .o file
 # and the library .o files. The only difference from the demo build command
@@ -145,7 +158,7 @@ clean:
 
 # This special rule tells Make that "all", "clean", and "test" are rules
 # that don't build a file.
-.PHONY: all clean test
+.PHONY: all clean test game server
 # Tells Make not to delete the .o files after the executable is built
 .PRECIOUS: out/%.o
 # Tells Make not to delete the wasm.o files after the executable is built
