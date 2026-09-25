@@ -309,6 +309,7 @@ void state_mouse_handler(state_t *state, mouse_event_type_t type,
       shoot_end(state->eng, shooter, mouse_x, mouse_y);
       break;
     }
+    break;
   case SCREEN_GAME_OVER:
     if (type == MOUSE_RELEASED) {
       SDL_Rect rect = get_reset_button_rect();
