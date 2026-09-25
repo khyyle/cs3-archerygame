@@ -39,7 +39,7 @@ void hud_draw(turn_engine_t *eng) {
   while (i < list_size(assets)) {
     asset_t *a = list_get(assets, i);
     if (asset_get_type(a) == ASSET_TEXT) {
-      list_remove(assets, i);
+      asset_destroy(list_remove(assets, i));
       continue;
     }
     i++;

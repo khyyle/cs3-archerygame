@@ -129,6 +129,7 @@ void asset_render(asset_t *asset) {
     SDL_Texture *text_texture =
         sdl_get_text_texture(text->text, color, text->font);
     sdl_render_image(text_texture, &text->base.bounding_box);
+    SDL_DestroyTexture(text_texture);
   }
 }
 asset_type_t asset_get_type(asset_t *asset) { return asset->type; }
