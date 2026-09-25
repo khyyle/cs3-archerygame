@@ -56,9 +56,4 @@ double level_ground_height(level_t *level, double x_world);
  */
 void level_destroy(level_t *level);
 
-/**
- * Exposes the ground's info string for effective comparison
- */
-const char *get_ground_info();
-
 #endif // LEVEL_H

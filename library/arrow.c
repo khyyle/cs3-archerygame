@@ -1,7 +1,7 @@
 #include "arrow.h"
 #include "asset.h"
+#include "body_info.h"
 #include "collision.h"
-#include "crate.h"
 #include "forces.h"
 #include "list.h"
 #include <SDL2/SDL.h>
@@ -15,8 +15,6 @@ const double DAMAGE_SCALE = 0.03;
 const double MAX_DAMAGE = 50;
 
 const size_t ARROW_VERTEX_NUMBER = 5;
-const char *ARROW_INFO = "arrow";
-const char *BURST_PARTICLE_INFO = "particle";
 
 const size_t CRATE_HEAL = 30;
 const size_t SHOOTER_HP = 100;
@@ -80,7 +78,7 @@ body_t *make_particle(vector_t centroid) {
   }
   body_t *particle =
       body_init_with_info(vertices, BURST_PARTICLE_MASS, BURST_COLOR,
-                          (void *)BURST_PARTICLE_INFO, NULL);
+                          body_info_init(BODY_TAG_PARTICLE, 0), free);
   return particle;
 }
 
@@ -130,7 +128,7 @@ void arrow_update_particles(level_t *level, double dt,
   size_t num_bodies = scene_bodies(scene);
   for (size_t i = 0; i < num_bodies; i++) {
     body_t *b = scene_get_body(scene, i);
-    if (strcmp(body_get_info(b), ARROW_INFO) == 0) {
+    if (body_has_tag(b, BODY_TAG_ARROW)) {
       arrow_add_particle_trail(b, variant);
     }
   }
@@ -191,7 +189,8 @@ void arrow_collision_handler(body_t *arrow, body_t *target, vector_t axis,
   if (target == arrow_details->shooter) {
     return;
   }
-  if (strcmp(body_get_info(target), get_ground_info()) == 0) {
+  body_info_t *info = body_get_info(target);
+  if (info == NULL || strcmp(info->tag, BODY_TAG_GROUND) == 0) {
     return;
   }
 
@@ -201,21 +200,18 @@ void arrow_collision_handler(body_t *arrow, body_t *target, vector_t axis,
       fmin(MAX_DAMAGE, DAMAGE_SCALE * mass_factor *
                            vec_get_length(body_get_velocity(arrow)));
 
-  if (crate_is(target)) {
-    crate_info_t *info = body_get_info(target);
-    info->hp -= damage;
+  if (strcmp(info->tag, BODY_TAG_CRATE) == 0) {
+    info->hp -= (int32_t)damage;
     if (info->hp <= 0) {
       asset_remove_body(target);
       body_remove(target);
-      int32_t *shooter_hp = body_get_info(arrow_details->shooter);
-      *shooter_hp = (*shooter_hp + CRATE_HEAL > SHOOTER_HP)
-                        ? SHOOTER_HP
-                        : *shooter_hp + CRATE_HEAL;
+      body_info_t *shooter_info = body_get_info(arrow_details->shooter);
+      shooter_info->hp = (shooter_info->hp + CRATE_HEAL > SHOOTER_HP)
+                             ? SHOOTER_HP
+                             : shooter_info->hp + CRATE_HEAL;
     }
-  }
-  int32_t *hp = body_get_info(target);
-  if (hp) {
-    *hp -= (int32_t)damage;
+  } else if (strcmp(info->tag, BODY_TAG_PLAYER) == 0) {
+    info->hp -= (int32_t)damage;
   }
   body_remove(arrow);
 }
@@ -230,15 +226,16 @@ body_t *arrow_spawn(scene_t *scene, body_t *shooter, vector_t start_vel,
                                    ARROW_SPECS[variant].SHAFT_LEN,
                                    ARROW_SPECS[variant].SHAFT_W,
                                    ARROW_SPECS[variant].TIP_LEN);
-  body_t *arrow = body_init_with_info(shape, ARROW_SPECS[variant].ARROW_MASS,
-                                      ARROW_COLOR, (void *)ARROW_INFO, NULL);
+  body_t *arrow = body_init_with_info(
+      shape, ARROW_SPECS[variant].ARROW_MASS, ARROW_COLOR,
+      body_info_init(BODY_TAG_ARROW, 0), free);
   body_set_velocity(arrow, start_vel);
   scene_add_body(scene, arrow);
   for (size_t i = 0; i < scene_bodies(scene); i++) {
     body_t *other = scene_get_body(scene, i);
     if (other == arrow || other == shooter ||
-        strcmp(body_get_info(other), get_ground_info()) == 0 ||
-        strcmp(body_get_info(other), ARROW_INFO) == 0) {
+        body_has_tag(other, BODY_TAG_GROUND) ||
+        body_has_tag(other, BODY_TAG_ARROW)) {
       continue;
     }
     arrow_aux_t *aux = malloc(sizeof(arrow_aux_t));
@@ -255,11 +252,11 @@ double arrow_front_offset(arrow_variant_t variant) {
 }
 
 bool particle_check_ground_collision(level_t *level, body_t *body) {
-  return alt_check_collision_certain_body(level, body, BURST_PARTICLE_INFO);
+  return alt_check_collision_certain_body(level, body, BODY_TAG_PARTICLE);
 }
 
 bool arrow_check_ground_collision(level_t *level, body_t *body) {
-  return alt_check_collision_certain_body(level, body, ARROW_INFO);
+  return alt_check_collision_certain_body(level, body, BODY_TAG_ARROW);
 }
 
 double arrow_vel_scale(arrow_variant_t variant) {

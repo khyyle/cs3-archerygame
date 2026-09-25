@@ -1,6 +1,7 @@
 #include "level.h"
 #include "arrow.h"
 #include "asset.h"
+#include "body_info.h"
 #include "camera.h"
 #include "forces.h"
 #include "sdl_wrapper.h"
@@ -14,7 +15,6 @@ const size_t NUM_ARENA_VERTICES = 60;
 const size_t NUM_WALL_VERITCES = 2;
 const size_t ARENA_HEIGHT = 100;
 const double IMMOVABLE_MASS = INFINITY;
-const char *GROUND_INFO = "ground";
 
 const double FOREST_HILL_HEIGHT = 90.0;
 const double FOREST_HILL_HALFWIDTH = 180.0;
@@ -103,7 +103,7 @@ body_t *make_ground(level_info_t info) {
   list_add(verts, br);
   list_add(verts, bl);
   return body_init_with_info(verts, IMMOVABLE_MASS, info.terrain_color,
-                             (void *)GROUND_INFO, NULL);
+                             body_info_init(BODY_TAG_GROUND, 0), free);
 }
 
 level_t *level_init(level_info_t info) {
@@ -169,7 +169,6 @@ double level_ground_height(level_t *level, double x) {
   }
 }
 
-const char *get_ground_info() { return GROUND_INFO; }
 
 void level_destroy(level_t *level) {
   if (!level) {

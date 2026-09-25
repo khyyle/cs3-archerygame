@@ -1,5 +1,6 @@
 #include "crate.h"
 #include "asset.h"
+#include "body_info.h"
 #include "camera.h"
 #include <math.h>
 #include <stdbool.h>
@@ -15,18 +16,12 @@ const char *CRATE_IMG = "assets/crate.png";
 const size_t CRATE_NUM_POINTS = 4;
 const color_t CRATE_COLOR = {1, 1, 1};
 const double LABEL_OFFSET = 12.0;
-const char *CRATE_TAG = "crate";
 const char *FONT_PATH = "assets/Arial.ttf";
 const size_t CRATE_HUD_PX = 20;
 const size_t TEXT_WIDTH = 50;
 
 bool crate_is(body_t *b) {
-  if (!b) {
-    return false;
-  }
-  color_t color = body_get_color(b);
-  return CRATE_COLOR.red == color.red && CRATE_COLOR.green == color.green &&
-         CRATE_COLOR.blue == color.blue;
+  return b != NULL && body_has_tag(b, BODY_TAG_CRATE);
 }
 
 body_t *crate_spawn(level_t *level) {
@@ -54,11 +49,9 @@ body_t *crate_spawn(level_t *level) {
     list_add(verts, vertex);
   }
 
-  crate_info_t *info = malloc(sizeof(crate_info_t));
-  *info = (crate_info_t){.tag = CRATE_TAG, .hp = CRATE_HP};
-
-  body_t *crate =
-      body_init_with_info(verts, CRATE_MASS, CRATE_COLOR, info, free);
+  body_t *crate = body_init_with_info(
+      verts, CRATE_MASS, CRATE_COLOR,
+      body_info_init(BODY_TAG_CRATE, CRATE_HP), free);
   asset_make_image_with_body(CRATE_IMG, crate);
   scene_add_body(scene, crate);
   return crate;
@@ -73,7 +66,7 @@ void crate_render_hp(scene_t *scene, camera_t *cam, const char *font_path,
       continue;
     }
 
-    int32_t hp = ((crate_info_t *)body_get_info(b))->hp;
+    int32_t hp = ((body_info_t *)body_get_info(b))->hp;
     char txt[64];
     sprintf(txt, "HP: %d", hp);
 

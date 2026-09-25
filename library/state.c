@@ -2,6 +2,7 @@
 #include "arrow.h"
 #include "asset.h"
 #include "asset_cache.h"
+#include "body_info.h"
 #include "color.h"
 #include "crate.h"
 #include "hud.h"
@@ -186,9 +187,9 @@ body_t *make_player(vector_t pos, double mass, color_t color,
     *v = (vector_t){pos.x + PLAYER_HITBOX[i].x, pos.y + PLAYER_HITBOX[i].y};
     list_add(vertices, v);
   }
-  int32_t *hp = malloc(sizeof(int32_t));
-  *hp = PLAYER_HP;
-  body_t *body = body_init_with_info(vertices, mass, color, hp, free);
+  body_t *body =
+      body_init_with_info(vertices, mass, color,
+                          body_info_init(BODY_TAG_PLAYER, PLAYER_HP), free);
   asset_make_image_with_body(img_path, body);
   return body;
 }
@@ -354,8 +355,14 @@ void state_tick(state_t *state, double dt) {
     body_t *p2 =
         scene_get_body(state->level->scene, state->eng->p_body_idx[PLAYER_TWO]);
 
-    int32_t hp1 = p1 ? *(int32_t *)body_get_info(p1) : 0;
-    int32_t hp2 = p2 ? *(int32_t *)body_get_info(p2) : 0;
+    int32_t hp1 = 0;
+    int32_t hp2 = 0;
+    if (p1) {
+      hp1 = ((body_info_t *)body_get_info(p1))->hp;
+    }
+    if (p2) {
+      hp2 = ((body_info_t *)body_get_info(p2))->hp;
+    }
 
     if (hp1 <= 0 || hp2 <= 0) {
       player_id_t winner = (hp2 <= 0 && hp1 > 0) ? PLAYER_ONE : PLAYER_TWO;

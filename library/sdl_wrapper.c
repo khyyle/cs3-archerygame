@@ -1,5 +1,6 @@
 #include "sdl_wrapper.h"
 #include "asset_cache.h"
+#include "body_info.h"
 #include "shoot.h"
 #include "state.h"
 #include <SDL2/SDL.h>
@@ -16,8 +17,6 @@ const size_t WINDOW_WIDTH = 1000;
 const size_t WINDOW_HEIGHT = 500;
 const SDL_Color SDL_BLACK = {0, 0, 0};
 const double MS_PER_S = 1000.0;
-const char *GND_INFO = "ground";
-const char *ARR_INFO = "arrow";
 
 /**
  * The coordinate at the center of the screen.
@@ -284,12 +283,11 @@ void sdl_render_scene(scene_t *scene) {
     if (body_is_removed(body)) {
       continue;
     }
-    char *info = body_get_info(body);
-    if (info) {
-      if (strcmp(info, GND_INFO) != 0 && strcmp(info, ARR_INFO) != 0 &&
-          strcmp(info, "particle") != 0) {
-        continue;
-      }
+    body_info_t *info = body_get_info(body);
+    if (info != NULL && strcmp(info->tag, BODY_TAG_GROUND) != 0 &&
+        strcmp(info->tag, BODY_TAG_ARROW) != 0 &&
+        strcmp(info->tag, BODY_TAG_PARTICLE) != 0) {
+      continue;
     }
 
     sdl_draw_body(body);

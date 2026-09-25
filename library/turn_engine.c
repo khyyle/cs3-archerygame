@@ -1,5 +1,6 @@
 #include "turn_engine.h"
 #include "arrow.h"
+#include "body_info.h"
 #include "crate.h"
 #include "sdl_wrapper.h"
 #include <SDL2/SDL.h>
@@ -268,7 +269,7 @@ void turn_engine_destroy(turn_engine_t *eng) {
 int32_t eng_get_player_hp(turn_engine_t *eng, player_id_t id) {
   body_t *b = scene_get_body(eng->level->scene, eng->p_body_idx[id]);
   assert(b);
-  return *(int32_t *)body_get_info(b);
+  return ((body_info_t *)body_get_info(b))->hp;
 }
 
 vector_t eng_get_player_pos(turn_engine_t *eng, player_id_t id) {

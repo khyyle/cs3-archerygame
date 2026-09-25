@@ -3,23 +3,11 @@
 
 #include "camera.h"
 #include "level.h"
-#include <stdint.h>
-
-typedef struct {
-  const char *tag;
-  int32_t hp;
-} crate_info_t;
 
 /**
  * Identify if something is a crate body
  */
 bool crate_is(body_t *b);
-
-/**
- * @param crate crate of interest
- * @return the hp of the crate
- */
-int32_t crate_get_hp(body_t *crate);
 
 /**
  * Spawn a crate at a random position in a level

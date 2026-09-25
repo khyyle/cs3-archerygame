@@ -1,5 +1,6 @@
 #include "collision.h"
 #include "body.h"
+#include "body_info.h"
 #include "list.h"
 #include "vector.h"
 
@@ -143,8 +144,9 @@ vector_t min_point_of_body(body_t *body) {
 bool alt_check_collision_certain_body(level_t *level, body_t *body,
                                       const char *required_info) {
   vector_t min_pt = min_point_of_body(body);
-  if (min_pt.y <= level_ground_height(level, min_pt.x) &&
-      strcmp(body_get_info(body), required_info) == 0) {
+  body_info_t *info = body_get_info(body);
+  if (min_pt.y <= level_ground_height(level, min_pt.x) && info != NULL &&
+      strcmp(info->tag, required_info) == 0) {
     return true;
   }
   return false;
